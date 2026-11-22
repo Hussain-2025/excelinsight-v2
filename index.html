@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ExcelInsight</title>
+
+  <meta name="description" content="Upload a spreadsheet and explore it: grid, charts, 3D views, pivots, outliers, data cleaning, AutoML and AI summaries.">
+
+  <!-- Fonts: Google Sans Flex (headings & UI), Inter fallback, JetBrains Mono for numbers -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    // One accent colour: electric blue #0d44e8. The old indigo/violet/purple utilities
+    // all map onto the same blue scale, so every view picks up the new look.
+    const accent = {
+      50: '#eef3ff', 100: '#dce6ff', 200: '#bccfff', 300: '#8eadff', 400: '#5a84fb',
+      500: '#2f5ff2', 600: '#0d44e8', 700: '#0a36c0', 800: '#0c2f99', 900: '#0f2b78', 950: '#0b1b4a'
+    };
+    tailwind.config = {
+      theme: {
+        extend: {
+          screens: { xs: '480px' },
+          fontFamily: {
+            sans: ['"Google Sans Flex"', 'Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
+          },
+          colors: { indigo: accent, violet: accent, purple: accent, brand: accent }
+        }
+      }
+    };
+  </script>
+
+  <!-- External Libraries: Lucide Icons, SheetJS, Chart.js, Three.js, jsPDF, html2canvas -->
+  <script src="https://unpkg.com/lucide@0.454.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <!-- Environment Configuration -->
+  <script src="env.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body
+  class="bg-white text-[#2b2f36] antialiased min-h-screen flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-800">
+
+  <!-- Top Application Header -->
+  <header class="app-header sticky top-0 z-40">
+    <div class="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4">
+
+      <!-- Brand & Title Matching Screenshot -->
+      <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+        <div
+          class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shrink-0">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.2]"></i>
+        </div>
+        <div class="truncate leading-tight">
+          <span class="brand-name text-base sm:text-lg text-black truncate block">ExcelInsight</span>
+          <span class="hidden sm:block text-[11px] text-slate-500">Spreadsheet analytics &amp; AutoML</span>
+        </div>
+      </div>
+
+      <!-- Header Action Controls -->
+      <div class="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+
+        <!-- Load Sample Dropdown -->
+        <div class="relative">
+          <button id="sampleDropdownBtn" onclick="toggleSampleMenu(event)" title="Load Sample Dataset"
+            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 text-xs font-semibold rounded-xl text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition shadow-xs">
+            <i data-lucide="sparkles" class="w-4 h-4 text-indigo-600"></i>
+            <span class="inline font-medium">Load Sample</span>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+          </button>
+
+          <div id="sampleDropdownMenu"
+            class="hidden fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full mt-1 sm:mt-2 w-auto sm:w-64 max-w-sm mx-auto sm:mx-0 rounded-2xl shadow-2xl bg-white border border-slate-200 ring-1 ring-black/5 z-50 p-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 block">Preset
+              Datasets</span>
+            <button onclick="loadSampleDataset('sales')"
+              class="w-full text-left px-3 py-2.5 text-xs rounded-xl hover:bg-slate-50 text-slate-800 font-medium flex items-center justify-between transition">
+              <div>
+                <div class="font-semibold text-slate-900">E-Commerce & Orders</div>
+                <div class="text-[11px] text-slate-400">Sales, Regions, Profits</div>
+              </div>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400"></i>
+            </button>
+            <button onclick="loadSampleDataset('students')"
+              class="w-full text-left px-3 py-2.5 text-xs rounded-xl hover:bg-slate-50 text-slate-800 font-medium flex items-center justify-between transition">
+              <div>
+                <div class="font-semibold text-slate-900">Student Academic Marks</div>
+                <div class="text-[11px] text-slate-400">Classes, Grades, Subjects</div>
+              </div>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400"></i>
+            </button>
+            <button onclick="loadSampleDataset('employees')"
+              class="w-full text-left px-3 py-2.5 text-xs rounded-xl hover:bg-slate-50 text-slate-800 font-medium flex items-center justify-between transition">
+              <div>
+                <div class="font-semibold text-slate-900">Employee HR Directory</div>
+                <div class="text-[11px] text-slate-400">Departments, Salaries, Cities</div>
+              </div>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400"></i>
+            </button>
+            <button onclick="loadSampleDataset('churn')"
+              class="w-full text-left px-3 py-2.5 text-xs rounded-xl hover:bg-slate-50 text-slate-800 font-medium flex items-center justify-between transition">
+              <div>
+                <div class="font-semibold text-slate-900">Customer Churn & Retention</div>
+                <div class="text-[11px] text-slate-400">Tenure, MonthlySpend, Churn (Classification)</div>
+              </div>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400"></i>
+            </button>
+            <button onclick="loadSampleDataset('forecast')"
+              class="w-full text-left px-3 py-2.5 text-xs rounded-xl hover:bg-slate-50 text-slate-800 font-medium flex items-center justify-between transition">
+              <div>
+                <div class="font-semibold text-slate-900">Monthly Revenue & Demand</div>
+                <div class="text-[11px] text-slate-400">24-Month Demand & Growth (Forecasting)</div>
+              </div>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Export Dropdown -->
+        <div class="relative">
+          <button id="exportDropdownBtn" onclick="toggleExportMenu(event)" title="Export Dataset"
+            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 text-xs font-semibold rounded-xl text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition shadow-xs">
+            <i data-lucide="download" class="w-4 h-4 text-slate-600"></i>
+            <span class="hidden sm:inline">Export</span>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 hidden xs:inline"></i>
+          </button>
+
+          <div id="exportDropdownMenu"
+            class="hidden fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full mt-1 sm:mt-2 w-auto sm:w-52 max-w-sm mx-auto sm:mx-0 rounded-2xl shadow-2xl bg-white border border-slate-200 ring-1 ring-black/5 z-50 p-2">
+            <button onclick="exportCurrentData('xlsx')"
+              class="w-full text-left px-3 py-2 text-xs rounded-xl hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-2">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> Export Excel (.xlsx)
+            </button>
+            <button onclick="exportCurrentData('csv')"
+              class="w-full text-left px-3 py-2 text-xs rounded-xl hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-2">
+              <i data-lucide="file-text" class="w-4 h-4 text-blue-600"></i> Export CSV (.csv)
+            </button>
+            <button onclick="exportCurrentData('json')"
+              class="w-full text-left px-3 py-2 text-xs rounded-xl hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-2">
+              <i data-lucide="code" class="w-4 h-4 text-amber-600"></i> Export JSON (.json)
+            </button>
+            <div class="border-t border-slate-100 my-1"></div>
+            <button onclick="exportAnalysisReportPDF()"
+              class="w-full text-left px-3 py-2 text-xs rounded-xl hover:bg-indigo-50 text-indigo-700 font-semibold flex items-center gap-2">
+              <i data-lucide="file-down" class="w-4 h-4 text-indigo-600"></i> Download Full PDF Report
+            </button>
+          </div>
+        </div>
+
+        <!-- 🗣️ AI NLQ Chat Assistant Trigger -->
+        <button id="aiChatDrawerBtn" onclick="toggleAiChatDrawer()" title="Ask AI Data Chatbot"
+          class="inline-flex items-center gap-1.5 px-2.5 sm:px-3.5 py-2 text-xs font-semibold rounded-xl text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition active:scale-95">
+          <i data-lucide="message-square" class="w-4 h-4"></i>
+          <span class="inline">Ask AI</span>
+        </button>
+
+        <!-- Primary Upload File Button -->
+        <label for="excelFileInput" title="Upload spreadsheet (.xlsx, .xls, .csv)"
+          class="inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-2 text-xs font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer active:scale-95 transition">
+          <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+          <span class="hidden md:inline">Upload File</span>
+          <span class="hidden sm:inline md:hidden">Upload</span>
+        </label>
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden"
+          onchange="handleFileUpload(event)" />
+
+        <!-- User Authentication / Profile Area -->
+        <div id="authHeaderContainer" class="flex items-center gap-1.5 sm:gap-2 pl-1 border-l border-slate-200">
+          <button id="authLoginBtn" onclick="openAuthModal()" title="Sign In"
+            class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-2 text-xs font-semibold rounded-xl text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+            <i data-lucide="user" class="w-4 h-4 text-slate-600"></i>
+            <span class="hidden sm:inline">Sign In</span>
+          </button>
+          <div id="authUserMenu" class="hidden flex items-center gap-1.5 sm:gap-2">
+            <span id="authUserName" class="text-xs font-bold text-slate-800 bg-slate-100 px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-200/80 truncate max-w-[75px] sm:max-w-[120px]">User</span>
+            <span id="authUserRoleBadge" class="hidden text-[10px] font-bold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200">ADMIN</span>
+            <button onclick="handleUserLogout()" title="Sign Out"
+              class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition">
+              <i data-lucide="log-out" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <main class="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 py-3.5 sm:py-5 w-full flex-1 flex flex-col gap-3.5 sm:gap-5">
+
+    <!-- Active File & Multi-Sheet Banner Matching Screenshot -->
+    <div
+      class="bg-white border border-slate-200/80 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+      <div class="flex items-center gap-3">
+        <!-- Rounded Green Spreadsheet Icon Box -->
+        <div
+          class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200/80 flex items-center justify-center shrink-0 shadow-xs">
+          <i data-lucide="table-2" class="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]"></i>
+        </div>
+
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <h2 id="bannerFileName"
+              class="text-xs sm:text-sm font-bold text-slate-900 tracking-tight truncate max-w-[200px] xs:max-w-xs sm:max-w-md">
+              Sales_Performance_Q3.xlsx</h2>
+            <div class="flex items-center gap-1.5">
+              <span id="bannerRowCount"
+                class="text-[10px] sm:text-[11px] font-semibold bg-slate-100 text-slate-700 px-2 sm:px-3 py-0.5 rounded-full font-mono">18 Rows</span>
+              <span id="bannerColCount"
+                class="text-[10px] sm:text-[11px] font-semibold bg-slate-100 text-slate-700 px-2 sm:px-3 py-0.5 rounded-full font-mono">8 Columns</span>
+            </div>
+          </div>
+          <p class="text-[11px] sm:text-[11.5px] text-slate-500 mt-0.5 truncate">Parsed in your browser · double-click any cell to edit</p>
+        </div>
+      </div>
+
+      <!-- Sheet Tabs Switcher (Pill UI matching screenshot) -->
+      <div class="w-full lg:w-auto overflow-x-auto no-scrollbar scroll-smooth flex items-center gap-2 py-1 border-t border-slate-100 lg:border-t-0 pt-2 lg:pt-0">
+        <span class="text-xs text-slate-400 font-medium flex items-center gap-1 shrink-0">
+          <i data-lucide="layers" class="w-3.5 h-3.5"></i> Sheets:
+        </span>
+        <div id="sheetPillContainer" class="flex items-center gap-1.5 flex-nowrap"></div>
+      </div>
+    </div>
+
+    <!-- 🌟 Real-Time Animated KPI Metric Cards -->
+    <div id="kpiCardsContainer" class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 p-3 sm:p-4 shadow-xs flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block truncate">Total Records</span>
+          <span id="kpiTotalRows" class="text-lg sm:text-2xl font-extrabold text-slate-900 font-mono">0</span>
+        </div>
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+          <i data-lucide="hash" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 p-3 sm:p-4 shadow-xs flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block truncate">Dimensions</span>
+          <span id="kpiTotalCols" class="text-lg sm:text-2xl font-extrabold text-slate-900 font-mono">0</span>
+        </div>
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+          <i data-lucide="columns-3" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 p-3 sm:p-4 shadow-xs flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <span id="kpiMetric1Label" class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block truncate">Primary Metric</span>
+          <span id="kpiMetric1Val" class="text-lg sm:text-2xl font-extrabold text-indigo-600 font-mono">0</span>
+        </div>
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+          <i data-lucide="trending-up" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 p-3 sm:p-4 shadow-xs flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <span id="kpiMetric2Label" class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider block truncate">Average Value</span>
+          <span id="kpiMetric2Val" class="text-lg sm:text-2xl font-extrabold text-slate-800 font-mono">0</span>
+        </div>
+        <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+          <i data-lucide="activity" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI executive summary -->
+    <div class="ai-card rounded-2xl p-4 sm:p-5">
+      <div class="flex flex-col md:flex-row md:items-start justify-between gap-3.5 sm:gap-4">
+        <div class="space-y-1.5 flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              AI summary · Google Gemini
+            </span>
+            <span id="aiInsightBadge" class="text-[11px] text-slate-400">Not generated yet</span>
+          </div>
+          <h3 class="text-base sm:text-lg text-black">Executive summary</h3>
+          <div id="aiInsightContent" class="ai-md text-sm text-slate-600 leading-relaxed pt-0.5 max-w-none">
+            Generate a short read-out of this sheet: what it covers, what stands out, and what to look at next.
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row md:flex-col items-stretch gap-2 shrink-0 w-full md:w-48 pt-1 sm:pt-0">
+          <button id="btnGenerateAiInsight" onclick="requestGeminiInsight()"
+            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition active:scale-95">
+            <i data-lucide="wand-2" class="w-4 h-4"></i>
+            <span>Generate Insights</span>
+          </button>
+          <button onclick="toggleAiChatDrawer()" title="Chat with this Report"
+            class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition active:scale-95">
+            <i data-lucide="message-square" class="w-3.5 h-3.5 text-indigo-600"></i>
+            <span>Chat with Report</span>
+          </button>
+          <button onclick="copyAiInsight()"
+            class="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-50 text-xs font-medium transition">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span>Copy Text</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🧮 Interactive Formula Engine Bar (fx) -->
+    <div class="bg-white border border-slate-200/90 rounded-xl sm:rounded-2xl p-2 sm:p-2.5 shadow-xs flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3">
+      <div class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 font-mono text-xs font-bold shrink-0">
+        <span class="italic text-indigo-600">fx</span>
+      </div>
+      <div class="relative flex-1 min-w-[200px]">
+        <input type="text" id="excelFormulaInput" placeholder="=SUM(Sales) · =AVERAGE(Profit) · =SUM(Profit)/SUM(Sales)*100 · MEDIAN, MIN, MAX, COUNT, COUNTA, STDEV"
+          onkeydown="if(event.key==='Enter') executeFormulaBar()"
+          class="w-full text-xs font-mono px-3 py-1.5 sm:py-2 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-indigo-500 text-slate-800" />
+      </div>
+      <div class="flex items-center gap-2 shrink-0 justify-end">
+        <button onclick="executeFormulaBar()"
+          class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition active:scale-95 shrink-0 shadow-xs">
+          <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+          <span>Compute</span>
+        </button>
+        <div id="formulaResultBadge" class="hidden font-mono text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0 max-w-[340px] truncate"></div>
+      </div>
+    </div>
+
+    <!-- Platform Tabs Navigation with Horizontal Sidescroller & Smooth Controls -->
+    <div class="border-b border-slate-200/90 relative flex items-center gap-1.5 pb-1">
+      <!-- Left Scroll Arrow -->
+      <button onclick="scrollTabsNav(-260)" id="tabNavScrollLeftBtn"
+        aria-label="Scroll tabs left" title="Scroll tabs left"
+        class="shrink-0 w-8 h-8 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 hover:text-indigo-600 transition shadow-xs active:scale-90 cursor-pointer">
+        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Scrollable Nav with Dedicated Visible Sidescroller -->
+      <nav id="platformTabsNav" onscroll="updateTabsNavScrollButtons()"
+        class="tabs-sidescroller flex-1 min-w-0 flex space-x-2 sm:space-x-5 overflow-x-auto scroll-smooth px-1 pb-2 pt-0.5" aria-label="Platform Views">
+        <!-- 1. Data Grid & Filter -->
+        <button onclick="switchTab('grid')" id="tabBtn-grid"
+          class="tab-nav-btn py-2 sm:pb-2.5 px-3 sm:px-2.5 border-b-2 font-semibold text-xs sm:text-sm text-indigo-600 border-indigo-600 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0">
+          <i data-lucide="table" class="w-4 h-4"></i> Data Grid
+        </button>
+
+        <!-- 2. Chart Studio (2D & 3D) -->
+        <button onclick="switchTab('charts')" id="tabBtn-charts"
+          class="tab-nav-btn py-2 sm:pb-2.5 px-3 sm:px-2.5 border-b-2 font-semibold text-xs sm:text-sm text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0">
+          <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Chart Studio
+        </button>
+
+        <!-- 3D Chart View (Dedicated WebGL 3D Visualization) -->
+        <button onclick="switchTab('3dchart')" id="tabBtn-3dchart"
+          class="tab-nav-btn py-2 sm:pb-2.5 px-3 sm:px-2.5 border-b-2 font-semibold text-xs sm:text-sm text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 group transition">
+          <i data-lucide="box" class="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform"></i>
+          <span>3D Chart View</span>
+          <span class="px-1.5 py-0.5 text-[9px] font-extrabold bg-indigo-100 text-indigo-700 rounded-full tracking-wider">3D</span>
+        </button>
+
+        <!-- 3. AutoML & Predictive Analytics Studio (Flagship AIML Minor Project) -->
+        <button onclick="switchTab('automl')" id="tabBtn-automl"
+          class="tab-nav-btn py-2 sm:pb-2.5 px-3 sm:px-2.5 border-b-2 font-semibold text-xs sm:text-sm text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0 group transition">
+          <i data-lucide="sparkles" class="w-4 h-4 text-violet-600 group-hover:scale-110 transition-transform"></i>
+          <span>AutoML Studio</span>
+          <span class="px-1.5 py-0.5 text-[9px] font-extrabold bg-violet-100 text-violet-700 rounded-full tracking-wider">AI/ML</span>
+        </button>
+
+        <!-- 3. Category Summary & Averages -->
+        <button onclick="switchTab('category')" id="tabBtn-category"
+          class="tab-nav-btn py-2 sm:pb-2.5 px-3 sm:px-2.5 border-b-2 font-semibold text-xs sm:text-sm text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0">
+          <i data-lucide="split" class="w-4 h-4"></i> Category Summary
+        </button>
+
+        <!-- 4. Pivot Matrix -->
+        <button onclick="switchTab('pivot')" id="tabBtn-pivot"
+          class="tab-nav-btn py-2 sm:pb-2.5 px-3 sm:px-2.5 border-b-2 font-semibold text-xs sm:text-sm text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0">
+          <i data-lucide="grid" class="w-4 h-4"></i> Pivot Table
+        </button>
+
+        <!-- 5. Sheet Compare & Diff Engine (NEW) -->
+        <button onclick="switchTab('diff')" id="tabBtn-diff"
+          class="tab-nav-btn py-2 sm:pb-2.5 px-3 sm:px-2.5 border-b-2 font-semibold text-xs sm:text-sm text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0">
+          <i data-lucide="git-compare" class="w-4 h-4 text-emerald-600"></i> Sheet Diff
+        </button>
+
+        <!-- 6. Statistical Anomaly & Outliers (NEW) -->
+        <button onclick="switchTab('anomalies')" id="tabBtn-anomalies"
+          class="tab-nav-btn py-2 sm:pb-2.5 px-3 sm:px-2.5 border-b-2 font-semibold text-xs sm:text-sm text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0">
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i> Outliers & AI
+        </button>
+
+        <!-- 7. Data Hygiene & Stats -->
+        <button onclick="switchTab('hygiene')" id="tabBtn-hygiene"
+          class="tab-nav-btn py-2 sm:pb-2.5 px-3 sm:px-2.5 border-b-2 font-semibold text-xs sm:text-sm text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> Data Hygiene
+        </button>
+
+        <!-- 8. Upload History (MongoDB) -->
+        <button onclick="switchTab('history')" id="tabBtn-history"
+          class="tab-nav-btn py-2 sm:pb-2.5 px-3 sm:px-2.5 border-b-2 font-semibold text-xs sm:text-sm text-slate-500 border-transparent hover:text-slate-700 hover:border-slate-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0">
+          <i data-lucide="history" class="w-4 h-4"></i> History
+        </button>
+
+        <!-- 9. Admin Control Panel (Only for Admin) -->
+        <button onclick="switchTab('admin')" id="tabBtn-admin"
+          class="hidden tab-nav-btn py-2 sm:pb-2.5 px-3 sm:px-2.5 border-b-2 font-semibold text-xs sm:text-sm text-amber-600 border-transparent hover:text-amber-700 hover:border-amber-400 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap shrink-0">
+          <i data-lucide="shield-alert" class="w-4 h-4"></i> Admin Panel
+        </button>
+      </nav>
+
+      <!-- Right Scroll Arrow -->
+      <button onclick="scrollTabsNav(260)" id="tabNavScrollRightBtn"
+        aria-label="Scroll tabs right" title="Scroll tabs right"
+        class="shrink-0 w-8 h-8 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-600 hover:text-indigo-600 transition shadow-xs active:scale-90 cursor-pointer">
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- TAB 1: DATA GRID & FILTER -->
+    <div id="tabContent-grid" class="tab-panel space-y-4">
+      <div
+        class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.02)] p-3.5 sm:p-5 flex flex-col gap-3.5 sm:gap-4">
+
+        <!-- Filter Controls Row -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3">
+          <!-- Real-Time Search Box -->
+          <div class="relative w-full sm:w-96">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input type="text" id="gridSearchInput" placeholder="Filter rows across all columns..."
+              oninput="handleGridSearch(this.value)"
+              class="w-full pl-10 pr-4 py-2 text-xs bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-700 font-normal transition placeholder-slate-400" />
+          </div>
+
+          <!-- Target Column Filter & Counter Matching Screenshot -->
+          <div class="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
+            <select id="gridColumnFilterSelect" onchange="renderGridData()"
+              class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 sm:px-3 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500 flex-1 sm:flex-none">
+              <option value="all">All Columns</option>
+            </select>
+
+            <span class="text-slate-300">|</span>
+
+            <span id="gridShowingCountLabel" class="text-xs font-medium text-slate-600 font-mono shrink-0">Showing 18 of 18</span>
+
+            <button onclick="resetGridSearch()"
+              class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold px-2 py-1 rounded-lg hover:bg-indigo-50 transition shrink-0">
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Spreadsheet Table Structure with ABC and 123 Badges -->
+        <div class="overflow-x-auto border border-slate-200/70 rounded-xl bg-white max-h-[500px]">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead
+              class="bg-[#f8fafc] text-slate-700 font-semibold sticky top-0 shadow-xs z-10 border-b border-slate-200">
+              <tr id="gridHeaderRow"></tr>
+            </thead>
+            <tbody id="gridTableBody" class="divide-y divide-slate-100 text-slate-700"></tbody>
+          </table>
+        </div>
+
+        <!-- Grid Pagination Controls -->
+        <div class="flex flex-row items-center justify-between gap-3 text-xs text-slate-500 pt-1">
+          <div class="flex items-center gap-2">
+            <span class="hidden xs:inline">Rows per page:</span>
+            <span class="xs:hidden">Rows:</span>
+            <select id="gridPageSizeSelect" onchange="changeGridPageSize(this.value)"
+              class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 font-mono">
+              <option value="25">25</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-1.5 sm:gap-2">
+            <button id="btnGridPrev" onclick="navigateGridPage(-1)"
+              class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40">
+              <i data-lucide="chevron-left" class="w-4 h-4 text-slate-600"></i>
+            </button>
+            <span id="gridPageIndicator" class="px-1.5 sm:px-2 font-medium text-slate-700 font-mono text-[11px] sm:text-xs">Page 1 of 1</span>
+            <button id="btnGridNext" onclick="navigateGridPage(1)"
+              class="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40">
+              <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TAB 2: CHART STUDIO -->
+    <div id="tabContent-charts" class="tab-panel hidden space-y-4 sm:space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-5">
+        <!-- Configuration Card -->
+        <div class="lg:col-span-1 bg-white border border-slate-200/80 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs space-y-3.5 sm:space-y-4">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i> Chart Configuration
+            </h3>
+            <p class="text-xs text-slate-500">Plot visual trends across any columns</p>
+          </div>
+
+          <!-- Visual Mode Switcher (2D vs 3D) -->
+          <div class="flex items-center p-1 bg-slate-100 rounded-xl gap-1">
+            <button type="button" id="visualMode2DBtn" onclick="setVisualMode('2d')"
+              class="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition bg-white text-indigo-700 shadow-xs">
+              <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i>
+              <span>2D Standard</span>
+            </button>
+            <button type="button" id="visualMode3DBtn" onclick="setVisualMode('3d')"
+              class="flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition text-slate-600 hover:text-slate-900">
+              <i data-lucide="box" class="w-3.5 h-3.5 text-indigo-500"></i>
+              <span>3D WebGL</span>
+            </button>
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1.5">Chart Type</label>
+            <select id="studioChartType" onchange="renderStudioChart()"
+              class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-700">
+              <optgroup label="2D Standard Visuals">
+                <option value="bar">Bar / Column</option>
+                <option value="line">Line Trend</option>
+                <option value="area">Area Chart</option>
+                <option value="doughnut">Doughnut Chart</option>
+                <option value="pie">Pie Chart</option>
+                <option value="scatter">Scatter Plot</option>
+                <option value="radar">Radar Matrix</option>
+              </optgroup>
+              <optgroup label="🌟 3D Interactive Visuals (Three.js WebGL)">
+                <option value="3d-column">🌟 3D Column Grid</option>
+                <option value="3d-scatter">🌐 3D Bubble & Scatter Universe</option>
+                <option value="3d-cylinder">🍩 3D Radial Cylinder Donut</option>
+                <option value="3d-surface">🏔️ 3D Surface Elevation Mesh</option>
+                <option value="3d-matrix">3D Stepped Grid Waterfall</option>
+                <option value="3d-pyramid">🔺 3D Pyramid & Funnel</option>
+                <option value="3d-pie">🛸 3D Floating Donut Ring</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1.5">Dimension (X-Axis)</label>
+            <select id="studioXCol" onchange="renderStudioChart()"
+              class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-700"></select>
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1.5">Metric (Y-Axis)</label>
+            <select id="studioYCol" onchange="renderStudioChart()"
+              class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-700"></select>
+          </div>
+
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1.5">Calculation</label>
+            <select id="studioAgg" onchange="renderStudioChart()"
+              class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-700">
+              <option value="avg">Average (Mean)</option>
+              <option value="sum">Sum (&Sigma;)</option>
+              <option value="count">Count Frequency</option>
+              <option value="max">Maximum</option>
+              <option value="min">Minimum</option>
+            </select>
+          </div>
+
+          <!-- 3D Fine-Tuning Controls (Visible when 3D chart selected) -->
+          <div id="threeDOptionsSection" class="hidden pt-3 border-t border-slate-100 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600 flex items-center gap-1.5">
+                <i data-lucide="box" class="w-3.5 h-3.5"></i> 3D Scene Controls
+              </span>
+            </div>
+
+            <div>
+              <label class="text-[11px] font-semibold text-slate-700 block mb-1">Color Palette</label>
+              <select id="threeDThemeSelect" onchange="update3DTheme(this.value)"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2 font-medium text-slate-700">
+                <option value="cyber">🌌 Cyber Neon (Indigo & Cyan)</option>
+                <option value="sunset">⚡ Cyberpunk Sunset (Fuchsia & Gold)</option>
+                <option value="emerald">🌿 Emerald Tech (Mint & Jade)</option>
+                <option value="minimal">💎 Modern Slate (Glossy Platinum)</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[11px] font-semibold text-slate-700 block mb-1">Rotation</label>
+                <button type="button" id="threeDAutoRotateBtn" onclick="toggle3DAutoRotate()"
+                  class="w-full py-1.5 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 border border-indigo-200/60 transition">
+                  <i data-lucide="play-circle" class="w-3.5 h-3.5"></i>
+                  <span id="threeDAutoRotateLabel">Active</span>
+                </button>
+              </div>
+              <div>
+                <label class="text-[11px] font-semibold text-slate-700 block mb-1">Floor Grid</label>
+                <button type="button" id="threeDGridToggleBtn" onclick="toggle3DFloorGrid()"
+                  class="w-full py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 transition">
+                  <i data-lucide="grid" class="w-3.5 h-3.5"></i>
+                  <span id="threeDGridToggleLabel">Enabled</span>
+                </button>
+              </div>
+            </div>
+
+            <button type="button" onclick="openInDedicated3DView()"
+              class="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95">
+              <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+              <span>Open in Dedicated 3D View</span>
+            </button>
+          </div>
+
+          <button onclick="renderStudioChart()"
+            class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition active:scale-95">
+            Refresh Visual
+          </button>
+        </div>
+
+        <!-- Studio Canvas Card -->
+        <div
+          class="lg:col-span-3 bg-white border border-slate-200/80 rounded-xl sm:rounded-2xl p-3.5 sm:p-6 shadow-xs flex flex-col justify-between">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3 sm:mb-4 gap-2">
+            <div class="min-w-0">
+              <h3 id="studioChartTitle" class="text-xs sm:text-sm font-bold text-slate-900 truncate">Visual Insights</h3>
+              <p id="studioChartDesc" class="text-[11px] sm:text-xs text-slate-500 truncate">Auto-aggregated for active spreadsheet</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button onclick="downloadStudioChart()"
+                class="px-2.5 sm:px-3 py-1.5 text-xs border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-1.5 shadow-2xs">
+                <i data-lucide="camera" class="w-3.5 h-3.5 text-slate-500"></i>
+                <span class="hidden xs:inline">Export PNG</span>
+              </button>
+            </div>
+          </div>
+          <div class="relative h-[280px] sm:h-[400px] w-full flex items-center justify-center">
+            <canvas id="studioChartCanvas"></canvas>
+            <div id="threeJsCanvasContainer" class="hidden relative w-full h-full rounded-xl overflow-hidden bg-[#090d16] flex items-center justify-center select-none group">
+              <!-- Floating 3D HUD Tooltip -->
+              <div id="threeDTooltip" class="pointer-events-none absolute hidden z-30 px-3 py-2 rounded-xl bg-slate-900/95 backdrop-blur-md border border-indigo-500/40 text-white shadow-2xl text-xs transition-opacity duration-75">
+                <div id="threeDTooltipTitle" class="font-bold text-indigo-300 text-[11px] uppercase tracking-wider"></div>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-slate-400">Value:</span>
+                  <span id="threeDTooltipValue" class="font-mono font-bold text-white text-sm"></span>
+                </div>
+                <div id="threeDTooltipShare" class="text-[10px] text-slate-400 mt-0.5"></div>
+              </div>
+
+              <!-- 3D HUD Toolbar -->
+              <div class="absolute top-3 right-3 z-20 flex items-center gap-1 bg-slate-900/80 backdrop-blur-md border border-slate-700/60 rounded-xl p-1 shadow-lg">
+                <button onclick="toggle3DAutoRotate()" id="hudRotateBtn" title="Toggle Auto-Rotation"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-[11px] font-semibold flex items-center gap-1">
+                  <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-indigo-400"></i>
+                  <span id="hudRotateText" class="hidden sm:inline">Pause</span>
+                </button>
+                <button onclick="set3DCameraView('isometric')" title="Isometric 3D View"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-[11px] font-semibold">
+                  3D
+                </button>
+                <button onclick="set3DCameraView('top')" title="Top-Down View"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-[11px] font-semibold">
+                  Top
+                </button>
+                <button onclick="set3DCameraView('front')" title="Front View"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-[11px] font-semibold">
+                  Front
+                </button>
+                <button onclick="reset3DCamera()" title="Reset Camera"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-400"></i>
+                </button>
+                <button onclick="toggle3DFullscreen()" title="Toggle Fullscreen"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+                  <i data-lucide="maximize" class="w-3.5 h-3.5 text-slate-400"></i>
+                </button>
+              </div>
+
+              <!-- Interactive Controls Hint -->
+              <div class="absolute bottom-3 left-3 z-20 pointer-events-none flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] text-slate-400">
+                <i data-lucide="mouse-pointer" class="w-3 h-3 text-indigo-400"></i>
+                <span>Drag to Rotate &bull; Scroll to Zoom &bull; Hover for Data HUD</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: DEDICATED 3D CHART VIEW -->
+    <div id="tabContent-3dchart" class="tab-panel hidden space-y-4 sm:space-y-5">
+      <!-- 3D Viewport Header -->
+      <div
+        class="bg-white border border-slate-200/80 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+          <div
+            class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shrink-0">
+            <i data-lucide="box" class="w-5 h-5"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <h2 class="text-sm sm:text-base font-bold text-slate-900 tracking-tight truncate">3D Chart View & Spatial Analytics</h2>
+              <span
+                class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 flex items-center gap-1 shrink-0">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> WebGL 3D
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 truncate">Hardware-accelerated 3D engine with dynamic orbital camera, lighting, and real-time data inspection HUD</p>
+          </div>
+        </div>
+
+        <!-- Quick Action Buttons -->
+        <div class="flex items-center gap-2 shrink-0 flex-wrap">
+          <span id="view3dActiveSheetBadge"
+            class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 text-xs font-mono font-medium rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-indigo-500"></i>
+            <span id="view3dActiveSheetName">Sales</span>
+          </span>
+          <button onclick="resetDedicated3DCamera()" title="Reset Camera Angle"
+            class="px-3 py-1.5 text-xs border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-2xs">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500"></i>
+            <span class="hidden xs:inline">Reset Camera</span>
+          </button>
+          <button onclick="downloadDedicated3DChart()" title="Export 3D Snapshot PNG"
+            class="px-3 py-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-2xs">
+            <i data-lucide="camera" class="w-3.5 h-3.5 text-indigo-600"></i>
+            <span>Export 3D PNG</span>
+          </button>
+          <button onclick="toggleDedicated3DFullscreen()" title="Toggle Fullscreen Mode"
+            class="px-3 py-1.5 text-xs bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-2xs">
+            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Fullscreen</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main 3D Studio Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-5">
+        <!-- Configuration & Controls Sidebar -->
+        <div class="lg:col-span-1 bg-white border border-slate-200/80 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xs space-y-4">
+          <div class="border-b border-slate-100 pb-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-indigo-600 flex items-center gap-1.5">
+              <i data-lucide="sliders" class="w-4 h-4"></i> 3D Visualization Setup
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">Customize spatial geometry, dimensions & lighting</p>
+          </div>
+
+          <!-- 3D Chart Type Select -->
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1.5">3D Chart Model</label>
+            <select id="view3dChartType" onchange="renderDedicated3DView()"
+              class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-700 focus:outline-none focus:border-indigo-500">
+              <option value="3d-column">🌟 3D Column Grid</option>
+              <option value="3d-scatter">🌐 3D Bubble Universe</option>
+              <option value="3d-cylinder">🍩 3D Radial Cylinder Donut</option>
+              <option value="3d-surface">🏔️ 3D Surface Elevation Mesh</option>
+              <option value="3d-matrix">3D Stepped Grid Waterfall</option>
+              <option value="3d-pyramid">🔺 3D Pyramid & Funnel</option>
+              <option value="3d-pie">🛸 3D Floating Donut Ring</option>
+            </select>
+          </div>
+
+          <!-- Dimension (X-Axis) -->
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1.5">Dimension (X-Axis Category)</label>
+            <select id="view3dXCol" onchange="renderDedicated3DView()"
+              class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-700 focus:outline-none focus:border-indigo-500"></select>
+          </div>
+
+          <!-- Metric (Y-Axis) -->
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1.5">Metric (Y-Axis Height)</label>
+            <select id="view3dYCol" onchange="renderDedicated3DView()"
+              class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-700 focus:outline-none focus:border-indigo-500"></select>
+          </div>
+
+          <!-- Aggregation -->
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1.5">Calculation</label>
+            <select id="view3dAgg" onchange="renderDedicated3DView()"
+              class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-700 focus:outline-none focus:border-indigo-500">
+              <option value="sum">Sum (&Sigma;)</option>
+              <option value="avg">Average (Mean)</option>
+              <option value="count">Count Frequency</option>
+              <option value="max">Maximum</option>
+              <option value="min">Minimum</option>
+            </select>
+          </div>
+
+          <!-- Theme Palette -->
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1.5">Color Palette & Environment</label>
+            <select id="view3dThemeSelect" onchange="updateDedicated3DTheme(this.value)"
+              class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 font-medium text-slate-700 focus:outline-none focus:border-indigo-500">
+              <option value="cyber">🌌 Cyber Neon (Indigo & Cyan)</option>
+              <option value="sunset">⚡ Cyberpunk Sunset (Fuchsia & Gold)</option>
+              <option value="emerald">🌿 Emerald Tech (Mint & Jade)</option>
+              <option value="minimal">💎 Modern Slate (Glossy Platinum)</option>
+              <option value="nebula">🔮 Cosmic Nebula (Violet & Magenta)</option>
+              <option value="solar">🔥 Solar Flare (Orange & Amber)</option>
+            </select>
+          </div>
+
+          <!-- Scene Modifiers Section -->
+          <div class="pt-2 border-t border-slate-100 space-y-3">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">Scene Modifiers</span>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[10px] font-semibold text-slate-600 block mb-1">Auto-Rotate</label>
+                <button type="button" id="view3dRotateBtn" onclick="toggleDedicated3DAutoRotate()"
+                  class="w-full py-2 px-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border border-indigo-200/60 transition active:scale-95">
+                  <i data-lucide="play-circle" class="w-3.5 h-3.5"></i>
+                  <span id="view3dRotateLabel">Active</span>
+                </button>
+              </div>
+
+              <div>
+                <label class="text-[10px] font-semibold text-slate-600 block mb-1">Rotation Speed</label>
+                <select id="view3dSpeedSelect" onchange="setDedicated3DRotationSpeed(this.value)"
+                  class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl py-2 px-2 font-medium text-slate-700 focus:outline-none">
+                  <option value="0.5">Slow (0.5x)</option>
+                  <option value="1.0" selected>Normal (1.0x)</option>
+                  <option value="2.0">Fast (2.0x)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[10px] font-semibold text-slate-600 block mb-1">Floor Grid</label>
+                <button type="button" id="view3dGridBtn" onclick="toggleDedicated3DFloorGrid()"
+                  class="w-full py-2 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border border-slate-200 transition active:scale-95">
+                  <i data-lucide="grid" class="w-3.5 h-3.5"></i>
+                  <span id="view3dGridLabel">Enabled</span>
+                </button>
+              </div>
+
+              <div>
+                <label class="text-[10px] font-semibold text-slate-600 block mb-1">Wireframe</label>
+                <button type="button" id="view3dWireBtn" onclick="toggleDedicated3DWireframe()"
+                  class="w-full py-2 px-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 border border-slate-200 transition active:scale-95">
+                  <i data-lucide="code" class="w-3.5 h-3.5"></i>
+                  <span id="view3dWireLabel">Solid</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="text-[10px] font-semibold text-slate-600">Height Scale</label>
+                <span id="view3dHeightVal" class="text-[10px] font-mono text-indigo-600 font-bold">1.0x</span>
+              </div>
+              <input type="range" id="view3dHeightSlider" min="0.5" max="2.2" step="0.1" value="1.0"
+                oninput="setDedicated3DHeightScale(this.value)"
+                class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+            </div>
+          </div>
+
+          <!-- Camera Presets -->
+          <div class="pt-2 border-t border-slate-100">
+            <span class="text-[10px] font-semibold text-slate-600 block mb-1.5">Camera Angle Presets</span>
+            <div class="grid grid-cols-4 gap-1.5">
+              <button onclick="setDedicated3DCamera('isometric')" class="py-1.5 px-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg text-xs font-semibold transition text-slate-700">3D</button>
+              <button onclick="setDedicated3DCamera('top')" class="py-1.5 px-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg text-xs font-semibold transition text-slate-700">Top</button>
+              <button onclick="setDedicated3DCamera('front')" class="py-1.5 px-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg text-xs font-semibold transition text-slate-700">Front</button>
+              <button onclick="setDedicated3DCamera('side')" class="py-1.5 px-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg text-xs font-semibold transition text-slate-700">Side</button>
+            </div>
+          </div>
+
+          <button onclick="renderDedicated3DView()"
+            class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition active:scale-95 flex items-center justify-center gap-1.5">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Refresh 3D Scene</span>
+          </button>
+        </div>
+
+        <!-- Right 3D Canvas Stage -->
+        <div class="lg:col-span-3 space-y-4">
+          <div class="bg-white border border-slate-200/80 rounded-xl sm:rounded-2xl p-3.5 sm:p-5 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-3 gap-2">
+              <div class="min-w-0">
+                <h3 id="view3dStageTitle" class="text-xs sm:text-sm font-bold text-slate-900 truncate">3D Visualization Viewport</h3>
+                <p id="view3dStageDesc" class="text-[11px] sm:text-xs text-slate-500 truncate">Interactive WebGL stage with physics orbital camera, shadows and depth cueing</p>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-mono text-[10px] font-semibold">60 FPS WebGL</span>
+              </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div id="dedicatedThreeJsCanvasContainer" class="relative w-full h-[460px] sm:h-[540px] rounded-xl overflow-hidden bg-[#090d16] border border-slate-900 flex items-center justify-center select-none group">
+              <!-- Floating 3D HUD Tooltip -->
+              <div id="view3dTooltip" class="pointer-events-none absolute hidden z-30 px-3.5 py-2.5 rounded-xl bg-slate-900/95 backdrop-blur-md border border-indigo-500/40 text-white shadow-2xl text-xs transition-opacity duration-75">
+                <div id="view3dTooltipTitle" class="font-bold text-indigo-300 text-[11px] uppercase tracking-wider"></div>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-slate-400">Value:</span>
+                  <span id="view3dTooltipValue" class="font-mono font-bold text-white text-sm"></span>
+                </div>
+                <div id="view3dTooltipShare" class="text-[10px] text-slate-400 mt-0.5"></div>
+              </div>
+
+              <!-- 3D HUD Toolbar -->
+              <div class="absolute top-3 right-3 z-20 flex items-center gap-1 bg-slate-900/80 backdrop-blur-md border border-slate-700/60 rounded-xl p-1 shadow-lg">
+                <button onclick="toggleDedicated3DAutoRotate()" id="view3dHudRotateBtn" title="Toggle Auto-Rotation"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-[11px] font-semibold flex items-center gap-1">
+                  <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-indigo-400"></i>
+                  <span id="view3dHudRotateText" class="hidden sm:inline">Pause</span>
+                </button>
+                <button onclick="setDedicated3DCamera('isometric')" title="Isometric 3D View"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-[11px] font-semibold">
+                  3D
+                </button>
+                <button onclick="setDedicated3DCamera('top')" title="Top-Down View"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-[11px] font-semibold">
+                  Top
+                </button>
+                <button onclick="setDedicated3DCamera('front')" title="Front View"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-[11px] font-semibold">
+                  Front
+                </button>
+                <button onclick="setDedicated3DCamera('side')" title="Side Profile View"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition text-[11px] font-semibold">
+                  Side
+                </button>
+                <button onclick="resetDedicated3DCamera()" title="Reset Camera"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-400"></i>
+                </button>
+                <button onclick="toggleDedicated3DFullscreen()" title="Toggle Fullscreen"
+                  class="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition">
+                  <i data-lucide="maximize" class="w-3.5 h-3.5 text-slate-400"></i>
+                </button>
+              </div>
+
+              <!-- Interactive Controls Hint -->
+              <div class="absolute bottom-3 left-3 z-20 pointer-events-none flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-800 text-[10px] text-slate-400">
+                <i data-lucide="mouse-pointer" class="w-3 h-3 text-indigo-400"></i>
+                <span>Left-Drag to Rotate &bull; Scroll to Zoom &bull; Right-Drag to Pan &bull; Hover Mesh for Live HUD</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Real-Time 3D Analytics KPI Cards Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div class="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs">
+              <span class="text-[10px] font-bold text-slate-400 uppercase block tracking-wider">Grand Total</span>
+              <span id="view3dKpiTotal" class="text-sm sm:text-base font-extrabold text-slate-900 font-mono block mt-0.5">-</span>
+              <span class="text-[9px] text-slate-400">Aggregate sum</span>
+            </div>
+
+            <div class="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs">
+              <span class="text-[10px] font-bold text-emerald-600 uppercase block tracking-wider">Peak Category</span>
+              <span id="view3dKpiMax" class="text-sm sm:text-base font-extrabold text-emerald-700 font-mono block mt-0.5 truncate">-</span>
+              <span id="view3dKpiMaxLabel" class="text-[9px] text-slate-400 truncate block">Highest value</span>
+            </div>
+
+            <div class="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs">
+              <span class="text-[10px] font-bold text-amber-600 uppercase block tracking-wider">Lowest Segment</span>
+              <span id="view3dKpiMin" class="text-sm sm:text-base font-extrabold text-amber-700 font-mono block mt-0.5 truncate">-</span>
+              <span id="view3dKpiMinLabel" class="text-[9px] text-slate-400 truncate block">Lowest value</span>
+            </div>
+
+            <div class="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs">
+              <span class="text-[10px] font-bold text-indigo-600 uppercase block tracking-wider">Mean Average</span>
+              <span id="view3dKpiAvg" class="text-sm sm:text-base font-extrabold text-indigo-700 font-mono block mt-0.5">-</span>
+              <span class="text-[9px] text-slate-400">Per category average</span>
+            </div>
+
+            <div class="bg-white border border-slate-200/80 rounded-xl p-3 shadow-2xs col-span-2 sm:col-span-1">
+              <span class="text-[10px] font-bold text-slate-400 uppercase block tracking-wider">Categories Plotted</span>
+              <span id="view3dKpiCount" class="text-sm sm:text-base font-extrabold text-slate-900 font-mono block mt-0.5">-</span>
+              <span class="text-[9px] text-slate-400">3D geometries active</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: AUTOML STUDIO & PREDICTIVE ANALYTICS -->
+    <div id="tabContent-automl" class="tab-panel hidden space-y-4 sm:space-y-6">
+
+      <!-- Hero Banner -->
+      <div class="automl-hero rounded-2xl p-4 sm:p-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="space-y-1.5 max-w-2xl">
+            <span class="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3 h-3"></i> Runs in your browser · fixed random seed
+            </span>
+            <h2 class="text-lg sm:text-2xl text-black tracking-tight">AutoML Studio</h2>
+            <p class="text-xs sm:text-sm text-slate-600">
+              Pick what to predict. The studio trains several models, scores each one on rows it did not see during training, ranks them on the metric you choose, and lets you try your own inputs.
+            </p>
+          </div>
+
+          <!-- Quick ML Scenario Launchers -->
+          <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0">
+            <button onclick="loadMlScenario('sales_regression')" title="Predict Profit on the sales sample"
+              class="px-3 py-2 bg-white hover:bg-slate-50 active:scale-95 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition">
+              <i data-lucide="trending-up" class="w-3.5 h-3.5 text-indigo-600"></i> Sales regression
+            </button>
+            <button onclick="loadMlScenario('churn_classification')" title="Predict churn on the customer sample"
+              class="px-3 py-2 bg-white hover:bg-slate-50 active:scale-95 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition">
+              <i data-lucide="user-x" class="w-3.5 h-3.5 text-indigo-600"></i> Churn classification
+            </button>
+            <button onclick="loadMlScenario('demand_forecast')" title="Forecast revenue on the monthly sample"
+              class="px-3 py-2 bg-white hover:bg-slate-50 active:scale-95 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-indigo-600"></i> Revenue forecast
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AutoML Setup & Configuration Wizard -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+        
+        <!-- Left 2 Cols: Setup Controls -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-4">
+          <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="sliders" class="w-4 h-4 text-violet-600"></i> AutoML Configuration Wizard
+              </h3>
+              <p class="text-xs text-slate-500">Choose the target, the task and the metric that decides the ranking</p>
+            </div>
+            <span class="text-[11px] font-semibold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100" title="Under 400 rows: 5-fold cross-validation. 400+ rows: 80/20 holdout.">
+              5-fold CV · 80/20 for 400+ rows
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- Target Column -->
+            <div>
+              <label class="text-[11px] font-semibold text-slate-700 block mb-1">Target Variable (To Predict):</label>
+              <select id="mlTargetColSelect" onchange="handleMlTargetChange()"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-medium text-slate-800 focus:outline-none focus:border-violet-500">
+              </select>
+            </div>
+
+            <!-- Task Type -->
+            <div>
+              <label class="text-[11px] font-semibold text-slate-700 block mb-1">Learning Task Type:</label>
+              <select id="mlTaskTypeSelect" onchange="handleMlTaskChange()"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-medium text-slate-800 focus:outline-none focus:border-violet-500">
+                <option value="regression">Regression (Continuous Numeric)</option>
+                <option value="classification">Classification (Categorical / Binary)</option>
+                <option value="forecasting">Time-Series (Chronological Horizon)</option>
+              </select>
+            </div>
+
+            <!-- Primary Metric -->
+            <div>
+              <label class="text-[11px] font-semibold text-slate-700 block mb-1">Primary Ranking Metric:</label>
+              <select id="mlPrimaryMetricSelect"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 font-medium text-slate-800 focus:outline-none focus:border-violet-500">
+                <option value="mae" selected>MAE · Mean Absolute Error</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Time-Series Forecasting Options (Conditional) -->
+          <div id="mlForecastingOptionsContainer" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-700 block mb-1">Date column:</label>
+              <select id="mlDateColSelect" class="w-full text-xs bg-white border border-violet-200 rounded-xl px-3 py-2 font-medium text-slate-800 focus:outline-none"></select>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-700 block mb-1">Periods to forecast:</label>
+              <select id="mlHorizonStepsSelect" class="w-full text-xs bg-white border border-violet-200 rounded-xl px-3 py-2 font-medium text-slate-800 focus:outline-none">
+                <option value="3">3 periods</option>
+                <option value="6" selected>6 periods</option>
+                <option value="12">12 periods</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Feature Selection Matrix -->
+          <div id="mlFeaturesBlock">
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[11px] font-semibold text-slate-700">Features (ID and date columns start unticked):</label>
+              <div class="flex items-center gap-3">
+                <button onclick="selectAllMlFeatures(true)" class="text-[11px] text-indigo-600 font-semibold hover:underline">Select all</button>
+                <button onclick="selectAllMlFeatures(false)" class="text-[11px] text-slate-500 font-semibold hover:underline">Clear</button>
+              </div>
+            </div>
+            <div id="mlFeaturesContainer" class="flex flex-wrap gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 min-h-[46px] items-center">
+              <!-- Feature pills injected via JS -->
+            </div>
+          </div>
+
+          <!-- Execution CTA Row -->
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+              <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+              <span>Imputation, scaling and one-hot encoding are fitted on training rows only</span>
+            </div>
+
+            <button onclick="runAutoMlTraining()" id="mlRunTrainBtn"
+              class="w-full sm:w-auto px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 transition">
+              <i data-lucide="play" class="w-4 h-4 fill-white"></i>
+              <span>Train AutoML Models</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right 1 Col: Algorithm Pipeline Overview -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 space-y-3.5 flex flex-col">
+          <div>
+            <h3 class="text-sm text-black flex items-center gap-2">
+              <i data-lucide="layers" class="w-4 h-4 text-indigo-600"></i> Models compared
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">Every run includes a naive baseline, so you can see whether a model adds anything</p>
+          </div>
+          <div class="space-y-2 text-xs text-slate-700">
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+              <div class="font-semibold text-slate-900 mb-0.5">Regression</div>
+              Mean baseline · Linear (OLS) · Ridge · Random Forest · Gradient Boosted Trees
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+              <div class="font-semibold text-slate-900 mb-0.5">Classification</div>
+              Majority baseline · Logistic Regression · Random Forest · k-Nearest Neighbours
+            </div>
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+              <div class="font-semibold text-slate-900 mb-0.5">Time series</div>
+              Naive last value · Moving average · Linear trend · Holt's smoothing
+            </div>
+          </div>
+          <div class="p-3 rounded-xl bg-indigo-50/60 border border-indigo-100 text-[11px] text-slate-600 space-y-1 mt-auto">
+            <div class="font-semibold text-black flex items-center gap-1.5">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5 text-indigo-600"></i> How scores are measured
+            </div>
+            <p>Each row is predicted by a model that never saw it (5-fold cross-validation; 80/20 holdout at 400+ rows). Runs are repeatable because the random seed is fixed at 42.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- AutoML Benchmark Leaderboard & Results -->
+      <div id="mlResultsSection" class="space-y-4 sm:space-y-5">
+        
+        <!-- Metric KPI Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div class="kpi-tile">
+            <span class="kpi-label">Top model</span>
+            <span id="mlKpiWinner" class="kpi-value text-sm sm:text-base truncate">–</span>
+            <span id="mlKpiWinnerNote" class="kpi-note">Train to see results</span>
+          </div>
+          <div class="kpi-tile">
+            <span class="kpi-label">Score</span>
+            <span id="mlKpiPrimaryScore" class="kpi-value text-indigo-700">–</span>
+            <span id="mlKpiPrimaryScoreLabel" class="kpi-note">–</span>
+          </div>
+          <div class="kpi-tile">
+            <span class="kpi-label">vs baseline</span>
+            <span id="mlKpiBaselineLift" class="kpi-value">–</span>
+            <span class="kpi-note">Improvement over the naive model</span>
+          </div>
+          <div class="kpi-tile">
+            <span class="kpi-label">Training time</span>
+            <span id="mlKpiLatency" class="kpi-value">–</span>
+            <span class="kpi-note">All models, all folds</span>
+          </div>
+          <div class="kpi-tile col-span-2 sm:col-span-1">
+            <span class="kpi-label">Scored on</span>
+            <span id="mlKpiTestRows" class="kpi-value">–</span>
+            <span id="mlKpiTestRowsNote" class="kpi-note">–</span>
+          </div>
+        </div>
+
+        <!-- Leaderboard Table -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="trophy" class="w-4 h-4 text-indigo-600"></i> Leaderboard
+              </h3>
+              <p id="mlLeaderboardSubtitle" class="text-xs text-slate-500">Train the models to see the ranking.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="exportMlReport()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-700 flex items-center gap-1.5 transition">
+                <i data-lucide="file-text" class="w-3.5 h-3.5 text-indigo-600"></i> Export Model Audit (.JSON)
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto border border-slate-200/70 rounded-xl max-h-[350px]">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-50 text-slate-700 font-semibold sticky top-0 border-b border-slate-200">
+                <tr id="mlLeaderboardHeadRow">
+                  <th class="py-2.5 px-3">Rank</th>
+                  <th class="py-2.5 px-3">Model</th>
+                  <th class="py-2.5 px-3">Score</th>
+                  <th class="py-2.5 px-3 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody id="mlLeaderboardTableBody" class="divide-y divide-slate-100 font-mono text-slate-700 tabular-nums">
+                <!-- Injected via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Deep Analytics: Feature Importance (XAI) & Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+          
+          <!-- Explainable AI (XAI) Feature Importance -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 space-y-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="bar-chart-horizontal" class="w-4 h-4 text-indigo-600"></i> What drives the prediction
+              </h3>
+              <p class="text-xs text-slate-500">Permutation importance of the winning model, grouped by original column</p>
+            </div>
+            <div class="h-64 sm:h-72 w-full relative">
+              <canvas id="automlFeatureImportanceChart"></canvas>
+            </div>
+            <p id="automlXaiSummary" class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+              Run training to inspect feature contributions.
+            </p>
+          </div>
+
+          <!-- Model Scores Benchmark Bar Chart -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 space-y-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-600"></i> Score by model
+              </h3>
+              <p class="text-xs text-slate-500">Same metric as the leaderboard; grey is the baseline</p>
+            </div>
+            <div class="h-64 sm:h-72 w-full relative">
+              <canvas id="automlModelComparisonChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Validation Diagnostics: Actual vs Predicted / Confusion Matrix / Forecast Horizon -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 space-y-4">
+          <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="activity" class="w-4 h-4 text-indigo-600"></i> Validation
+              </h3>
+              <p class="text-xs text-slate-500">Predictions made on rows the model had not seen</p>
+            </div>
+            <span id="automlValidationModeBadge" class="text-xs font-semibold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-100">
+              –
+            </span>
+          </div>
+
+          <!-- Container for Regression Scatter / Line -->
+          <div id="automlRegressionValidationContainer" class="h-72 w-full relative">
+            <canvas id="automlValidationChart"></canvas>
+          </div>
+
+          <!-- Container for Classification Confusion Matrix -->
+          <div id="automlClassificationValidationContainer" class="hidden space-y-3">
+            <div id="automlConfusionMatrixGrid" class="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-xl border border-slate-200">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+
+          <!-- Container for Time-Series Forecasting Horizon -->
+          <div id="automlForecastingValidationContainer" class="hidden h-72 w-full relative">
+            <canvas id="automlForecastChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Real-Time What-If Prediction Playground -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 sm:p-5 space-y-4">
+          <div class="border-b border-slate-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="play-circle" class="w-4 h-4 text-indigo-600"></i> Try your own inputs
+              </h3>
+              <p class="text-xs text-slate-500">The winning model, retrained on every row, predicts from the values you enter</p>
+            </div>
+            <button onclick="exportHoldoutPredictionsCsv()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 flex items-center gap-1.5 transition">
+              <i data-lucide="download" class="w-3.5 h-3.5 text-indigo-600"></i> Download Predictions (.CSV)
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <!-- Left 2 cols: Dynamic Feature Inputs -->
+            <div class="lg:col-span-2 space-y-3">
+              <div id="mlInferenceInputsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- Inputs injected via JS -->
+              </div>
+              <button onclick="runSinglePrediction()" id="mlRunInferenceBtn"
+                class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-xs rounded-xl flex items-center gap-2 transition">
+                <i data-lucide="sparkles" class="w-4 h-4"></i> Run Model Inference
+              </button>
+            </div>
+
+            <!-- Right 1 col: Prediction Result Card -->
+            <div class="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex flex-col justify-between">
+              <div>
+                <span class="text-[11px] font-semibold text-indigo-700 block">Prediction</span>
+                <div id="mlInferenceResultValue" class="text-2xl sm:text-3xl font-semibold font-mono text-slate-900 mt-2">
+                  -
+                </div>
+                <p id="mlInferenceConfidenceText" class="text-xs text-slate-500 mt-1">
+                  Train the models, then run a prediction.
+                </p>
+              </div>
+
+              <div class="pt-3 border-t border-indigo-100 text-[11px] text-slate-600 space-y-1">
+                <div class="flex items-center justify-between gap-2">
+                  <span>Model:</span>
+                  <strong id="mlActivePipelineName" class="text-slate-900 text-right">–</strong>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                  <span>Certainty:</span>
+                  <strong id="mlActiveConfidencePct" class="text-indigo-700 text-right">–</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- TAB 3: CATEGORY SUMMARY & AVERAGES -->
+    <div id="tabContent-category" class="tab-panel hidden space-y-4 sm:space-y-5">
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-5 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="split" class="w-4 h-4 text-indigo-600"></i> Full Category Averages & Aggregations
+            </h3>
+            <p class="text-xs text-slate-500">Aggregates every category without truncating to top items.</p>
+          </div>
+
+          <!-- Group Selectors -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 w-full md:w-auto">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Group By Category (X):</label>
+              <select id="categoryGroupSelect" onchange="runCategoryAggregation()"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500"></select>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Calculate Values For (Y):</label>
+              <select id="categoryMetricSelect" onchange="runCategoryAggregation()"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500"></select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aggregation Table and Chart Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 pt-1">
+          <!-- Comprehensive Breakdown Table -->
+          <div class="lg:col-span-2 overflow-x-auto border border-slate-200/70 rounded-xl max-h-[460px]">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-[#f8fafc] text-slate-700 font-semibold sticky top-0 border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3">Category Value</th>
+                  <th class="py-2.5 px-3 font-mono">Row Count</th>
+                  <th class="py-2.5 px-3 font-mono">Total Sum</th>
+                  <th class="py-2.5 px-3 font-mono text-indigo-600 font-semibold">Calculated Average</th>
+                  <th class="py-2.5 px-3 font-mono">Min Value</th>
+                  <th class="py-2.5 px-3 font-mono">Max Value</th>
+                  <th class="py-2.5 px-3 font-mono text-right">% of Grand Total</th>
+                </tr>
+              </thead>
+              <tbody id="categoryTableBody" class="divide-y divide-slate-100 font-mono text-slate-700"></tbody>
+              <tfoot id="categoryTableFoot"
+                class="bg-slate-50 font-mono font-bold text-slate-900 border-t border-slate-200"></tfoot>
+            </table>
+          </div>
+
+          <!-- Category Comparison Chart -->
+          <div class="p-3.5 sm:p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-3 border-b border-slate-200/70 pb-2">
+              <span id="categoryChartTitle" class="text-xs font-semibold text-slate-700 truncate">Category Comparison</span>
+              <span
+                class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">Average</span>
+            </div>
+            <div class="relative h-[260px] sm:h-[320px] w-full flex items-center justify-center">
+              <canvas id="categoryChartCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: DATA HYGIENE & STATS -->
+    <div id="tabContent-hygiene" class="tab-panel hidden space-y-4 sm:space-y-6">
+
+      <!-- 1. Quick Data Transformations Card -->
+      <div
+        class="bg-white border border-slate-200/80 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.02)] space-y-3.5 sm:space-y-4">
+        <div>
+          <h3 class="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="wrench" class="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600"></i> Quick Data Transformations
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">Clean dataset artifacts directly inside your browser</p>
+        </div>
+
+        <!-- Action Buttons matching screenshot -->
+        <div class="grid grid-cols-1 xs:grid-cols-2 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 pt-1">
+          <!-- Deduplicate Rows -->
+          <button onclick="hygieneRemoveDuplicates()"
+            class="inline-flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition active:scale-95">
+            <i data-lucide="copy" class="w-4 h-4 text-slate-500"></i>
+            <span>Deduplicate Rows</span>
+          </button>
+
+          <!-- Strip Empty / Null Rows -->
+          <button onclick="hygieneStripNullRows()"
+            class="inline-flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 text-slate-700 font-semibold text-xs shadow-xs transition active:scale-95">
+            <i data-lucide="trash-2" class="w-4 h-4 text-rose-500"></i>
+            <span>Strip Empty / Null Rows</span>
+          </button>
+
+          <!-- Standardize Text & Trim Spaces -->
+          <button onclick="hygieneTrimWhitespace()"
+            class="inline-flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition active:scale-95">
+            <i data-lucide="sparkles" class="w-4 h-4 text-indigo-600"></i>
+            <span>Standardize text (trim + fix case)</span>
+          </button>
+
+          <!-- Restore Original Data -->
+          <button onclick="hygieneRestoreOriginal()"
+            class="inline-flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs shadow-xs transition active:scale-95">
+            <i data-lucide="rotate-ccw" class="w-4 h-4 text-slate-500"></i>
+            <span>Restore Original</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Smart cleaning pipeline -->
+      <div class="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">One-click cleaning</span>
+              <span id="dataHealthScoreBadge" class="text-xs font-mono font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">Data Health Score: –</span>
+            </div>
+            <h3 class="text-sm sm:text-base text-black mt-1">Smart cleaning pipeline</h3>
+            <p class="text-xs text-slate-500">Drops empty rows, merges case variants, removes duplicates, fills gaps (ID columns are left alone) and caps extreme values</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="runSmartDataCleaningPipeline()"
+              class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold text-xs rounded-xl transition flex items-center gap-1.5">
+              <i data-lucide="wand-2" class="w-4 h-4"></i> Run cleaning pipeline
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+          <div class="kpi-tile">
+            <span class="kpi-label">Missing values</span>
+            <span id="hygieneMissingCount" class="kpi-value">–</span>
+            <span class="kpi-note">Filled with median or most common value</span>
+          </div>
+          <div class="kpi-tile">
+            <span class="kpi-label">Duplicate rows</span>
+            <span id="hygieneDupCount" class="kpi-value">–</span>
+            <span class="kpi-note">Matched after trimming spaces</span>
+          </div>
+          <div class="kpi-tile">
+            <span class="kpi-label">Text issues</span>
+            <span id="hygieneVariantCount" class="kpi-value text-sm">–</span>
+            <span class="kpi-note">e.g. "saket" vs "Saket"</span>
+          </div>
+          <div class="kpi-tile">
+            <span class="kpi-label">Outlier capping</span>
+            <span id="hygieneWinsorizeCount" class="kpi-value text-sm">Outer fences</span>
+            <span class="kpi-note">Beyond Q1 − 3×IQR or Q3 + 3×IQR, columns with 8+ values</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Column Profiles & Data Health Header Matching Screenshot -->
+      <div class="space-y-3.5 sm:space-y-4">
+        <div class="flex items-center gap-2 px-1">
+          <i data-lucide="table-2" class="w-4 h-4 text-emerald-600"></i>
+          <h3 class="text-xs sm:text-base font-bold text-slate-900 tracking-tight">Column Profiles & Data Health</h3>
+        </div>
+
+        <!-- Dynamic Grid of Column Cards matching screenshot -->
+        <div id="columnProfilesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <!-- Injected via JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: PIVOT TABLE & MATRIX -->
+    <div id="tabContent-pivot" class="tab-panel hidden space-y-4 sm:space-y-5">
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-5 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="grid" class="w-4 h-4 text-indigo-600"></i> Dynamic Pivot Matrix
+            </h3>
+            <p class="text-xs text-slate-500">Cross-tabulate multidimensional rows vs columns with custom aggregation</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-center gap-2.5 sm:gap-3 w-full lg:w-auto">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Rows Dimension:</label>
+              <select id="pivotRowSelect" onchange="renderPivotMatrix()"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500"></select>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Columns Dimension:</label>
+              <select id="pivotColSelect" onchange="renderPivotMatrix()"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500"></select>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Value Field:</label>
+              <select id="pivotValSelect" onchange="renderPivotMatrix()"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500"></select>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Calculation:</label>
+              <select id="pivotAggSelect" onchange="renderPivotMatrix()"
+                class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500">
+                <option value="sum">Sum (&Sigma;)</option>
+                <option value="avg">Average</option>
+                <option value="count">Count Frequency</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200/70 rounded-xl max-h-[500px]">
+          <table id="pivotMatrixTable" class="w-full text-left text-xs border-collapse">
+            <thead id="pivotTableHead" class="bg-slate-50 text-slate-700 font-semibold sticky top-0 border-b border-slate-200"></thead>
+            <tbody id="pivotTableBody" class="divide-y divide-slate-100 font-mono text-slate-700"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: UPLOAD HISTORY (MONGODB) -->
+    <div id="tabContent-history" class="tab-panel hidden space-y-4 sm:space-y-5">
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 gap-2">
+          <div class="min-w-0">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2 truncate">
+              <i data-lucide="history" class="w-4 h-4 text-indigo-600 shrink-0"></i> Cloud Upload History
+            </h3>
+            <p class="text-[11px] sm:text-xs text-slate-500 truncate">Stored datasets in MongoDB Atlas for your account</p>
+          </div>
+          <button onclick="fetchUploadHistory()"
+            class="px-2.5 sm:px-3 py-1.5 text-xs border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-1.5 shrink-0">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500"></i>
+            <span class="hidden xs:inline">Refresh</span>
+          </button>
+        </div>
+
+        <div id="historyAuthNotice" class="hidden p-4 sm:p-6 rounded-2xl bg-amber-50 border border-amber-200 text-center space-y-2">
+          <p class="text-sm font-bold text-amber-900">Sign in to save and browse upload history</p>
+          <p class="text-xs text-amber-700">Every spreadsheet you analyze will be safely indexed in your MongoDB cloud database.</p>
+          <button onclick="openAuthModal()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs">
+            Sign In / Register
+          </button>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200/70 rounded-xl">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+              <tr>
+                <th class="py-2.5 px-3 whitespace-nowrap">File Name</th>
+                <th class="py-2.5 px-3 whitespace-nowrap">Sheets</th>
+                <th class="py-2.5 px-3 whitespace-nowrap">Rows</th>
+                <th class="py-2.5 px-3 whitespace-nowrap">Columns</th>
+                <th class="py-2.5 px-3 whitespace-nowrap">Uploaded At</th>
+                <th class="py-2.5 px-3 text-right whitespace-nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody" class="divide-y divide-slate-100 font-mono text-slate-700">
+              <tr>
+                <td colspan="6" class="py-6 text-center text-slate-400 font-sans">No saved uploads found. Upload or load a spreadsheet to save history.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: ADMIN CONTROL PANEL -->
+    <div id="tabContent-admin" class="tab-panel hidden space-y-4 sm:space-y-5">
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 gap-2">
+          <div class="min-w-0">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-2 truncate">
+              <i data-lucide="shield-check" class="w-4 h-4 text-amber-600 shrink-0"></i> Platform Administration
+            </h3>
+            <p class="text-[11px] sm:text-xs text-slate-500 truncate">Registered users, system-wide uploads, and row metrics</p>
+          </div>
+          <button onclick="fetchAdminData()"
+            class="px-2.5 sm:px-3 py-1.5 text-xs border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-1.5 shrink-0">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500"></i>
+            <span class="hidden xs:inline">Refresh</span>
+          </button>
+        </div>
+
+        <!-- Admin Overview Metric Counters -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div class="p-3.5 sm:p-4 rounded-xl border border-slate-200/80 bg-slate-50/50">
+            <span class="text-xs font-semibold text-slate-500 uppercase">Total Users</span>
+            <span id="adminTotalUsers" class="block text-xl sm:text-2xl font-semibold text-slate-900 font-mono mt-1">0</span>
+          </div>
+          <div class="p-3.5 sm:p-4 rounded-xl border border-slate-200/80 bg-slate-50/50">
+            <span class="text-xs font-semibold text-slate-500 uppercase">System Uploads</span>
+            <span id="adminTotalUploads" class="block text-xl sm:text-2xl font-semibold text-indigo-600 font-mono mt-1">0</span>
+          </div>
+          <div class="p-3.5 sm:p-4 rounded-xl border border-slate-200/80 bg-slate-50/50">
+            <span class="text-xs font-semibold text-slate-500 uppercase">Rows Processed</span>
+            <span id="adminTotalRows" class="block text-xl sm:text-2xl font-semibold text-emerald-600 font-mono mt-1">0</span>
+          </div>
+        </div>
+
+        <div class="space-y-2 pt-2">
+          <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">User Directory & Roles</h4>
+          <div class="overflow-x-auto border border-slate-200/70 rounded-xl">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3 whitespace-nowrap">Name</th>
+                  <th class="py-2.5 px-3 whitespace-nowrap">Email</th>
+                  <th class="py-2.5 px-3 whitespace-nowrap">Role</th>
+                  <th class="py-2.5 px-3 whitespace-nowrap">Uploads</th>
+                  <th class="py-2.5 px-3 whitespace-nowrap">Created</th>
+                  <th class="py-2.5 px-3 text-right whitespace-nowrap">Action</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersTableBody" class="divide-y divide-slate-100 text-slate-700 font-mono"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: SHEET COMPARE & DIFF ENGINE -->
+    <div id="tabContent-diff" class="tab-panel hidden space-y-4 sm:space-y-5">
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-5 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="git-compare" class="w-4 h-4 text-emerald-600"></i> Spreadsheet Diff Engine
+            </h3>
+            <p class="text-xs text-slate-500">Rows are matched on a key column, so a deleted row no longer shifts everything below it</p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full lg:w-auto items-end">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Base Sheet (Original):</label>
+              <select id="diffBaseSheetSelect" onchange="populateDiffKeyDropdown()" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500"></select>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Compare With (Revised):</label>
+              <select id="diffTargetSheetSelect" onchange="populateDiffKeyDropdown()" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500"></select>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Match rows on:</label>
+              <select id="diffKeyColSelect" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500"></select>
+            </div>
+            <div class="space-y-1.5">
+              <label class="flex items-center gap-1.5 text-[11px] text-slate-600 font-medium cursor-pointer">
+                <input type="checkbox" id="diffOnlyChangesToggle" onchange="runSheetComparison()" class="accent-indigo-600 w-3.5 h-3.5"> Show only changes
+              </label>
+              <button onclick="runSheetComparison()"
+                class="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition active:scale-95 flex items-center justify-center">
+                Compare Sheets
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Diff Summary Statistics -->
+        <div id="diffSummaryContainer" class="hidden grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+          <div class="p-3 sm:p-3.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-900">
+            <span class="text-[11px] font-semibold uppercase block">Unchanged rows</span>
+            <span id="diffIdenticalCount" class="text-lg font-extrabold font-mono">0</span>
+          </div>
+          <div class="p-3 sm:p-3.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-900">
+            <span class="text-[11px] font-semibold uppercase block">Modified rows</span>
+            <span id="diffModifiedCount" class="text-lg font-extrabold font-mono">0</span>
+          </div>
+          <div class="p-3 sm:p-3.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-900">
+            <span class="text-[11px] font-semibold uppercase block">Added / removed</span>
+            <span id="diffVarianceCount" class="text-lg font-extrabold font-mono">0</span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200/70 rounded-xl max-h-[500px]">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-50 text-slate-700 font-semibold sticky top-0 border-b border-slate-200">
+              <tr id="diffHeaderRow"></tr>
+            </thead>
+            <tbody id="diffTableBody" class="divide-y divide-slate-100 font-mono text-slate-700">
+              <tr>
+                <td colspan="6" class="py-10 text-center text-slate-400 font-sans">
+                  Select two sheets above and click <strong>Compare Sheets</strong> to see differences.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: STATISTICAL ANOMALY & OUTLIER DETECTOR -->
+    <div id="tabContent-anomalies" class="tab-panel hidden space-y-4 sm:space-y-5">
+      <div class="bg-white rounded-xl sm:rounded-2xl border border-slate-200/80 shadow-xs p-3.5 sm:p-5 space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 pb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i> Outlier detection
+            </h3>
+            <p class="text-xs text-slate-500">Ensemble flags a value when at least 2 of 3 methods agree: Isolation Forest, Z-score (|Z| ≥ 2.5) and Tukey's IQR fences. Blank cells are skipped.</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5 sm:gap-3 w-full md:w-auto">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Detection Method:</label>
+              <select id="anomalyAlgorithmSelect" onchange="runAnomalyDetection()"
+                class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500">
+                <option value="ensemble" selected>Ensemble (2 of 3 agree)</option>
+                <option value="iforest">Isolation Forest</option>
+                <option value="zscore">Z-Score (|Z| ≥ 2.5)</option>
+                <option value="iqr">Tukey's IQR (1.5 &times; IQR)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Analyze Column:</label>
+              <select id="anomalyColSelect" onchange="runAnomalyDetection()"
+                class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500"></select>
+            </div>
+
+            <div>
+              <label class="text-[11px] font-semibold text-slate-600 block mb-1">Contamination Rate:</label>
+              <select id="anomalyContaminationSelect" onchange="runAnomalyDetection()"
+                class="text-xs bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 font-medium text-slate-700 focus:outline-none focus:border-indigo-500">
+                <option value="0.05" selected>5% (iForest cut-off)</option>
+                <option value="0.10">10% (iForest cut-off)</option>
+                <option value="0.15">15% (iForest cut-off)</option>
+              </select>
+            </div>
+
+            <div class="self-end">
+              <button onclick="clampOutliers()"
+                class="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-xl text-xs font-semibold transition active:scale-95 flex items-center justify-center gap-1.5">
+                <i data-lucide="scissors" class="w-3.5 h-3.5 text-amber-700"></i> Cap at IQR fences
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Anomaly Metric Badges -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3">
+          <div class="p-3 sm:p-3.5 rounded-xl border border-slate-200 bg-slate-50">
+            <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase block truncate">Total Outliers</span>
+            <span id="anomalyCount" class="text-lg sm:text-xl font-bold font-mono text-rose-600">0</span>
+          </div>
+          <div class="p-3 sm:p-3.5 rounded-xl border border-slate-200 bg-slate-50">
+            <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase block truncate">Mean &mu;</span>
+            <span id="anomalyMean" class="text-lg sm:text-xl font-bold font-mono text-slate-800">0</span>
+          </div>
+          <div class="p-3 sm:p-3.5 rounded-xl border border-slate-200 bg-slate-50">
+            <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase block truncate">Std Dev &sigma;</span>
+            <span id="anomalyStdDev" class="text-lg sm:text-xl font-bold font-mono text-slate-800">0</span>
+          </div>
+          <div class="p-3 sm:p-3.5 rounded-xl border border-slate-200 bg-slate-50">
+            <span class="text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase block truncate">IQR Range</span>
+            <span id="anomalyIqrRange" class="text-xs font-bold font-mono text-indigo-600 block mt-1.5 truncate">-</span>
+          </div>
+          <div class="p-3 sm:p-3.5 rounded-xl border border-amber-200 bg-amber-50/60 col-span-2 sm:col-span-1">
+            <span class="text-[10px] sm:text-[11px] font-semibold text-amber-800 uppercase block truncate">iForest Anomaly Score</span>
+            <span id="anomalyIForestScore" class="text-xs font-bold font-mono text-amber-700 block mt-1.5 truncate">Ensemble Active</span>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Flagged Outlier Records</h4>
+          <div class="overflow-x-auto border border-slate-200/70 rounded-xl max-h-[350px]">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-slate-50 text-slate-700 font-semibold sticky top-0 border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3 whitespace-nowrap">Row #</th>
+                  <th class="py-2.5 px-3 whitespace-nowrap">Dimension</th>
+                  <th class="py-2.5 px-3 whitespace-nowrap">Observed Value</th>
+                  <th class="py-2.5 px-3 font-mono whitespace-nowrap">iForest Score</th>
+                  <th class="py-2.5 px-3 font-mono whitespace-nowrap">Z-Score</th>
+                  <th class="py-2.5 px-3 whitespace-nowrap">Deviation Type</th>
+                  <th class="py-2.5 px-3 text-right whitespace-nowrap">Action</th>
+                </tr>
+              </thead>
+              <tbody id="anomalyTableBody" class="divide-y divide-slate-100 font-mono text-slate-700"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Backdrop for AI Chat Drawer on Mobile -->
+  <div id="aiChatBackdrop" class="hidden fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-xs transition-opacity" onclick="toggleAiChatDrawer()"></div>
+
+  <!-- 🗣️ Side Drawer: Chat with Your Data (NLQ Assistant) -->
+  <div id="aiChatDrawer" class="hidden fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] h-full max-h-[100dvh] bg-white shadow-2xl border-l border-slate-200 flex flex-col">
+    <div class="p-3.5 sm:p-4 bg-white flex items-center justify-between border-b border-slate-200 shrink-0">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h3 class="text-sm text-black leading-tight">Chat with your data</h3>
+          <p class="text-[11px] text-slate-500">Answers use exact totals from every row</p>
+        </div>
+      </div>
+      <button onclick="toggleAiChatDrawer()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 active:scale-95 transition">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Chat Messages Stream -->
+    <div id="aiChatMessages" class="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-3.5 text-xs bg-slate-50/50">
+      <div class="p-3.5 rounded-2xl bg-white border border-slate-200 text-slate-700 space-y-1.5 shadow-2xs">
+        <div class="flex items-center gap-1.5 font-bold text-indigo-600">
+          <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+          <span>ExcelInsight assistant</span>
+        </div>
+        <p class="leading-relaxed">
+          Ask a question in plain English. A few to start with:
+        </p>
+        <div class="flex flex-col gap-1.5 pt-1">
+          <button onclick="askPresetQuestion('Summarize the key findings from the executive report')" class="text-left px-2.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium text-[11px] transition">
+            "Summarize key findings from executive report"
+          </button>
+          <button onclick="askPresetQuestion('Which category has the highest sales?')" class="text-left px-2.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium text-[11px] transition">
+            "Which category has the highest sales?"
+          </button>
+          <button onclick="askPresetQuestion('Are there any negative profits in this dataset?')" class="text-left px-2.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium text-[11px] transition">
+            "Are there any negative profits in this dataset?"
+          </button>
+          <button onclick="askPresetQuestion('Show me a bar chart of sales by region')" class="text-left px-2.5 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium text-[11px] transition">
+            "Show me a bar chart of sales by region"
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat Input Area -->
+    <div class="p-3 pb-[max(12px,env(safe-area-inset-bottom))] bg-white border-t border-slate-200 shrink-0">
+      <form onsubmit="handleSendAiChatMessage(event)" class="flex items-center gap-2">
+        <input type="text" id="aiChatInput" placeholder="Ask a question about your data..."
+          class="flex-1 text-xs px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-indigo-500 text-slate-800" />
+        <button type="submit" id="aiChatSendBtn"
+          class="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition active:scale-95 shrink-0 shadow-xs">
+          <i data-lucide="send" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 🔐 User Authentication Modal (Login / Register) -->
+  <div id="authModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-2xl sm:rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in duration-200 max-h-[92dvh] overflow-y-auto">
+      <div class="p-4 sm:p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+              <i data-lucide="lock" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 id="authModalTitle" class="text-base font-bold text-slate-900">Sign in to Excel Insight</h3>
+              <p class="text-xs text-slate-500">MERN Stack Authentication & Dashboard</p>
+            </div>
+          </div>
+          <button onclick="closeAuthModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <!-- Mode Switcher -->
+        <div class="flex border-b border-slate-200">
+          <button id="authTabLogin" onclick="switchAuthMode('login')"
+            class="flex-1 pb-2.5 text-xs font-bold text-indigo-600 border-b-2 border-indigo-600 text-center">
+            Sign In
+          </button>
+          <button id="authTabRegister" onclick="switchAuthMode('register')"
+            class="flex-1 pb-2.5 text-xs font-bold text-slate-400 border-b-2 border-transparent hover:text-slate-700 text-center">
+            Create Account
+          </button>
+        </div>
+
+        <!-- Auth Form -->
+        <form id="authForm" onsubmit="handleAuthSubmit(event)" class="space-y-3 sm:space-y-3.5">
+          <div id="authNameGroup" class="hidden space-y-1">
+            <label class="text-xs font-semibold text-slate-700">Full Name</label>
+            <input type="text" id="authNameInput" placeholder="Enter your full name"
+              class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-800" />
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-slate-700">Email Address</label>
+            <input type="email" id="authEmailInput" required placeholder="user@domain.com"
+              class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-800" />
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-slate-700">Password</label>
+            <input type="password" id="authPasswordInput" required placeholder="••••••••" minlength="6"
+              class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-slate-800" />
+          </div>
+
+          <div id="authRoleGroup" class="hidden space-y-1">
+            <label class="text-xs font-semibold text-slate-700">Account Type</label>
+            <select id="authRoleInput" class="w-full px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-700">
+              <option value="user">Regular User</option>
+              <option value="admin">Platform Admin</option>
+            </select>
+          </div>
+
+          <button type="submit" id="authSubmitBtn"
+            class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 active:scale-95 transition">
+            Sign In
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Quick AI Chatbot Launcher -->
+  <button id="floatingAiChatBtn" onclick="toggleAiChatDrawer()" title="Open AI Data Chatbot"
+    class="fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/25 active:scale-95 transition-all">
+    <i data-lucide="message-square" class="w-4 h-4"></i>
+    <span class="text-xs font-semibold">Ask AI</span>
+  </button>
+
+  <!-- Notification Toast -->
+  <div id="toastNotification"
+    class="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex justify-center sm:justify-end">
+    <div
+      class="bg-black text-white text-xs font-medium px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 max-w-md">
+      <i id="toastIcon" data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+      <span id="toastMessage">Action completed successfully!</span>
+    </div>
+  </div>
+
+  <!-- Application Scripts -->
+  <script src="app.js"></script>
+</body>
+
+</html>
