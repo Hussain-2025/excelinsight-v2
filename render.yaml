@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: excelinsight-api
+    name: datavista-api
     env: node
     plan: free
     region: oregon
