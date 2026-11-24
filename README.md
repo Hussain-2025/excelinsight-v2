@@ -53,3 +53,5 @@ Open index.html directly in your browser or run a local static server:
 npx http-server . -p 8080
 `
 Visit http://localhost:8080.
+
+# excelinsight-v2

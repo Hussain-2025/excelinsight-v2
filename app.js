@@ -1259,7 +1259,7 @@ function downloadStudioChart() {
     const url = AppState.threeJs.renderer.domElement.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ExcelInsight_3D_${chartType}_${Date.now()}.png`;
+    a.download = `DataVista_3D_${chartType}_${Date.now()}.png`;
     a.click();
     showToast('3D WebGL chart snapshot downloaded as PNG');
     return;
@@ -1268,7 +1268,7 @@ function downloadStudioChart() {
   const url = AppState.studioChartInstance.toBase64Image();
   const a = document.createElement('a');
   a.href = url;
-  a.download = `ExcelInsight_Chart_${Date.now()}.png`;
+  a.download = `DataVista_Chart_${Date.now()}.png`;
   a.click();
   showToast('Chart snapshot downloaded as PNG');
 }
@@ -1311,13 +1311,13 @@ function exportCurrentData(format) {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState.filteredRows, null, 2));
     const a = document.createElement('a');
     a.href = dataStr;
-    a.download = `ExcelInsight_${AppState.activeSheet}_${Date.now()}.json`;
+    a.download = `DataVista_${AppState.activeSheet}_${Date.now()}.json`;
     a.click();
   } else {
     const ws = XLSX.utils.json_to_sheet(AppState.filteredRows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, AppState.activeSheet);
-    XLSX.writeFile(wb, `ExcelInsight_${AppState.activeSheet}_${Date.now()}.${ext}`);
+    XLSX.writeFile(wb, `DataVista_${AppState.activeSheet}_${Date.now()}.${ext}`);
   }
   showToast(`Exported ${AppState.filteredRows.length} records to .${ext}`);
   document.getElementById('exportDropdownMenu').classList.add('hidden');
@@ -3417,7 +3417,7 @@ async function exportAnalysisReportPDF() {
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
-    doc.text('ExcelInsight report', M, 20);
+    doc.text('Data Vista report', M, 20);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9.5);
     doc.setTextColor(100, 116, 139);
@@ -3476,10 +3476,10 @@ async function exportAnalysisReportPDF() {
     for (let i = 1; i <= pages; i++) {
       doc.setPage(i);
       doc.setFontSize(8); doc.setTextColor(148, 163, 184);
-      doc.text(`ExcelInsight · page ${i} of ${pages}`, M, 290);
+      doc.text(`Data Vista · page ${i} of ${pages}`, M, 290);
     }
 
-    doc.save(`ExcelInsight_Report_${AppState.activeSheet}_${Date.now()}.pdf`);
+    doc.save(`DataVista_Report_${AppState.activeSheet}_${Date.now()}.pdf`);
     showToast('PDF report downloaded');
   } catch (err) {
     console.error(err);
@@ -3513,7 +3513,7 @@ function switchAuthMode(mode) {
   document.getElementById('authNameGroup').classList.toggle('hidden', isLogin);
   document.getElementById('authRoleGroup').classList.toggle('hidden', isLogin);
   document.getElementById('authSubmitBtn').textContent = isLogin ? 'Sign In' : 'Create Account';
-  document.getElementById('authModalTitle').textContent = isLogin ? 'Sign in to Excel Insight' : 'Create your Account';
+  document.getElementById('authModalTitle').textContent = isLogin ? 'Sign in to Data Vista' : 'Create your Account';
 }
 
 async function handleAuthSubmit(e) {
@@ -5747,14 +5747,14 @@ function exportHoldoutPredictionsCsv() {
     lines = [['Row', `Actual_${target}`, `Predicted_${target}`, 'Residual'].join(',')];
     preds.forEach(p => lines.push([p.row, p.actual, p.predicted, p.residual].map(csvCell).join(',')));
   }
-  mlDownload(lines.join('\n'), 'text/csv', `ExcelInsight_AutoML_${automl.bestModel.algorithm}_${Date.now()}.csv`);
+  mlDownload(lines.join('\n'), 'text/csv', `DataVista_AutoML_${automl.bestModel.algorithm}_${Date.now()}.csv`);
   showToast(`Exported ${preds.length} predictions from ${automl.bestModel.name}`);
 }
 
 function buildMlAuditPayload() {
   const a = AppState.automl;
   return {
-    platform: 'ExcelInsight',
+    platform: 'Data Vista',
     timestamp: new Date().toISOString(),
     dataset: AppState.fileName,
     sheet: AppState.activeSheet,
@@ -5773,6 +5773,6 @@ function buildMlAuditPayload() {
 
 function exportMlReport() {
   if (!AppState.automl.bestModel) { showToast('Train AutoML models first to export the audit', true); return; }
-  mlDownload(JSON.stringify(buildMlAuditPayload(), null, 2), 'application/json', `ExcelInsight_ML_Audit_${Date.now()}.json`);
+  mlDownload(JSON.stringify(buildMlAuditPayload(), null, 2), 'application/json', `DataVista_ML_Audit_${Date.now()}.json`);
   showToast('Model audit JSON downloaded');
 }
